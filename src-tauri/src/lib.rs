@@ -137,7 +137,7 @@ struct RewriteInput{session_id:String,request_id:String,text:String,instruction:
   }
   if let Ok(mut lock)=app_clone.state::<AppState>().requests.lock(){lock.remove(&request_id);}
  });
- state.requests.lock().map_err(AppError::internal)?.insert(input.request_id,task.abort_handle());Ok(())
+ state.requests.lock().map_err(AppError::internal)?.insert(input.request_id,task.inner().abort_handle());Ok(())
 }
 #[tauri::command]fn cancel_ai_request(app:tauri::AppHandle,state:State<'_,AppState>,request_id:String)->Result<()> {
  if let Some(handle)=state.requests.lock().map_err(AppError::internal)?.remove(&request_id) {handle.abort();let _=app.emit("ai://cancelled",serde_json::json!({"requestId":request_id}));}

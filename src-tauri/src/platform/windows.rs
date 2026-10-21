@@ -3,7 +3,7 @@ use crate::{errors::{AppError,Result},selection::NativeSelection};
 use windows::{core::Interface,Win32::{System::Com::{CoInitializeEx,CoUninitialize,CoCreateInstance,COINIT_APARTMENTTHREADED,CLSCTX_INPROC_SERVER},UI::{Accessibility::{CUIAutomation,IUIAutomation,IUIAutomationTextPattern,UIA_TextPatternId},WindowsAndMessaging::GetForegroundWindow}}};
 pub fn read_selection()->Result<NativeSelection>{
  unsafe {
-  CoInitializeEx(None,COINIT_APARTMENTTHREADED).map_err(|_|AppError::new("ACCESSIBILITY_UNAVAILABLE","Windows UI Automation could not initialize.","Retry with an accessible text control."))?;
+  CoInitializeEx(None,COINIT_APARTMENTTHREADED).ok().map_err(|_|AppError::new("ACCESSIBILITY_UNAVAILABLE","Windows UI Automation could not initialize.","Retry with an accessible text control."))?;
   let result=(|| -> Result<NativeSelection>{
    let automation:IUIAutomation=CoCreateInstance(&CUIAutomation,None,CLSCTX_INPROC_SERVER).map_err(|_|native_error())?;
    let focused=automation.GetFocusedElement().map_err(|_|native_error())?;
