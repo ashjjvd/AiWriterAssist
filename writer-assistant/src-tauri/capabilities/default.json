@@ -1,0 +1,1 @@
+{"$schema":"../gen/schemas/desktop-schema.json","identifier":"default","description":"Limited windows and clipboard capabilities","windows":["settings","assistant"],"permissions":["core:default","core:window:default","core:event:default","clipboard-manager:allow-write-text"]}

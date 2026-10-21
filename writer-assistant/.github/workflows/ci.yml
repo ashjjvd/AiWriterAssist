@@ -1,0 +1,43 @@
+name: validation
+on:
+  push:
+  pull_request:
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.18.0'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install frontend deps
+        run: pnpm install --no-frozen-lockfile
+      - name: Frontend checks
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+          pnpm build
+      - name: Rust checks
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace
+        working-directory: src-tauri
+      - name: Verify real lexical DB (release gate)
+        run: python3 scripts/dictionaries/verify.py
+      - name: Build native app
+        run: pnpm tauri build

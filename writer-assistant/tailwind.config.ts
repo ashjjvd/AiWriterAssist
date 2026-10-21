@@ -1,0 +1,2 @@
+import type { Config } from 'tailwindcss';
+export default { content:['./index.html','./src/**/*.{ts,tsx}'],darkMode:'class',theme:{extend:{colors:{background:'hsl(var(--background))',foreground:'hsl(var(--foreground))',card:'hsl(var(--card))',muted:'hsl(var(--muted))',accent:'hsl(var(--accent))',border:'hsl(var(--border))',primary:'hsl(var(--primary))',danger:'hsl(var(--danger))'}}},plugins:[] } satisfies Config;

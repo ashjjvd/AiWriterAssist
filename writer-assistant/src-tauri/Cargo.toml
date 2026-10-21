@@ -1,0 +1,46 @@
+[package]
+name = "writer-assistant"
+version = "0.2.0"
+description = "Privacy-conscious cross-app writing assistant"
+authors = ["Writer Assistant Contributors"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "writer_assistant_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.8.0", features = ["tray-icon"] }
+tauri-plugin-global-shortcut = "2.3.0"
+tauri-plugin-clipboard-manager = "2.3.0"
+serde = { version = "1", features=["derive"] }
+serde_json = "1"
+tokio = { version = "1", features=["full"] }
+reqwest = { version = "0.12", default-features = false, features=["rustls-tls", "json", "stream", "socks"] }
+thiserror = "2"
+rusqlite = { version = "0.32", features=["bundled"] }
+keyring = { version = "3", features=["apple-native","windows-native"] }
+harper-core = { version = "2.11", features=["concurrent"] }
+sha2 = "0.10"
+hex = "0.4"
+unicode-normalization = "0.1"
+uuid = { version="1", features=["v4","serde"] }
+futures-util = "0.3"
+url = "2"
+chrono = { version="0.4", features=["serde","clock"] }
+
+[target.'cfg(target_os="windows")'.dependencies]
+windows = { version = "0.61", features=["Win32_System_Com","Win32_UI_Accessibility","Win32_UI_WindowsAndMessaging","Win32_Foundation"] }
+
+[target.'cfg(target_os="macos")'.dependencies]
+core-foundation = "0.10"
+accessibility-sys = "0.2"
+
+[dev-dependencies]
+wiremock = "0.6"
+tempfile = "3"
