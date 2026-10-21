@@ -153,8 +153,8 @@ pub struct Analysis {
     pub suggestions: Vec<WritingSuggestion>,
 }
 pub fn parse_analysis(raw: &str) -> Result<Analysis> {
-    let start = raw.find('{').ok_or_else(|| invalid_response())?;
-    let end = raw.rfind('}').ok_or_else(|| invalid_response())?;
+    let start = raw.find('{').ok_or_else(invalid_response)?;
+    let end = raw.rfind('}').ok_or_else(invalid_response)?;
     if start > end {
         return Err(invalid_response());
     }

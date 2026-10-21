@@ -41,7 +41,7 @@ pub fn apply_correction(text: &str, issue: &Issue, replacement: &str) -> Result<
     }
     let start = utf16_to_byte(text, issue.start_offset).ok_or_else(invalid_range)?;
     let end = utf16_to_byte(text, issue.end_offset).ok_or_else(invalid_range)?;
-    if start > end || &text[start..end] != issue.original_text {
+    if start > end || text[start..end] != issue.original_text {
         return Err(AppError::new(
             "STALE_CORRECTION",
             "The original text no longer matches this suggestion.",

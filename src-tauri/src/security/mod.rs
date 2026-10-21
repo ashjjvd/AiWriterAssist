@@ -25,6 +25,7 @@ pub fn load_secret(reference: &str) -> Result<String> {
             )
         })
 }
+#[allow(dead_code)]
 pub fn delete_secret(reference: &str) -> Result<()> {
     keyring::Entry::new(SERVICE, reference)
         .map_err(|_| keychain_error())?

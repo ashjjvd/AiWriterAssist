@@ -10,7 +10,7 @@ pub fn read_native_selection() -> Result<NativeSelection> {
     }
     #[cfg(target_os = "macos")]
     {
-        return macos::read_selection();
+        macos::read_selection()
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
