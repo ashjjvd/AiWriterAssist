@@ -12,7 +12,7 @@ export default function ThesaurusPanel({source,onPreview}:{source:string;onPrevi
  useEffect(()=>{const id=++nonce.current;setError('');setEntries([]);setNext(undefined);setSelected(null);
   if(!word.trim())return;
   setBusy(true);api.synonyms(word,mode,filter,0).then(r=>{if(id===nonce.current){setEntries(r.groups);setNext(r.nextCursor);setTotal(r.totalUniqueTerms)}}).catch(e=>{if(id===nonce.current)setError(errorMessage(e))}).finally(()=>{if(id===nonce.current)setBusy(false)});
-  return()=>{nonce.current++};
+  return()=>{nonce.current=id+1};
  },[word,mode,filter]);
  const loadMore=async()=>{if(next===undefined||busy)return;setBusy(true);try{const r=await api.synonyms(word,mode,filter,next);setEntries(v=>[...v,...r.groups]);setNext(r.nextCursor)}catch(e){setError(errorMessage(e))}finally{setBusy(false)}};
  const preview=()=>{if(!selected)return;const escaped=word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const replaced=source.replace(new RegExp(`\\b${escaped}\\b`,'i'),selected.term);if(replaced===source){setError('The searched word was not found in the selection. Use Copy word or adjust the lookup.');return}onPreview(replaced)};
