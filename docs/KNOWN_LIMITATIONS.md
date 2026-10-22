@@ -1,25 +1,16 @@
-# Known limitations (not a release)
+# Known limitations — v0.2.0 beta
 
-1. No native macOS/Windows build or runtime test occurred. OS-specific APIs have
-   source implementations but are unverified and may require build corrections.
-2. Automatic replacement is intentionally disabled (`copy_only`); manual copy
-   and paste is required. There is no fallback clipboard capture.
-3. Official Moby II / OEWN files could not be fetched in this environment. The
-   actual lexical database is absent. The importer is real and fixture tested;
-   thesaurus commands report `DICTIONARY_UNAVAILABLE` until import succeeds.
-4. No pnpm lockfile or Cargo.lock was produced, because package registries and
-   toolchains are unavailable. Version ranges in manifests are NOT lockfiles.
-5. There is no verified inference result from any of the eight provider families.
-   HTTP adapters were authored, not live tested. Some streamed provider event
-   variants and invalid UTF-8 boundary fragments are not fully handled.
-6. The local grammar path uses Harper but native compilation and actual grammar
-   output have not been tested. Mixed English+Urdu is skipped conservatively.
-7. Provider model discovery is only handled for OpenAI-compatible `/models`.
-   Anthropic Messages / Zen manual model IDs require human configuration.
-8. The agent requested complete release-grade CI/native QA but those steps are
-   not finished. GitHub Actions is scaffolded, and currently fails the dictionary
-   release gate until real sources have been added.
-9. Settings persist, but window geometry and some additional user preferences do
-   not yet persist. There is no connection reuse cache.
-10. Floating popup implementation and UI behavior have not been visually or
-    interactively tested on an actual target platform.
+This list describes **current beta risks**, not guarantees of failure. Passing automated tests and generating native installers does not substitute for real-device compatibility testing.
+
+1. **Cross-application selection depends on OS accessibility support.** Not all editors expose selected text; password fields and protected controls are unsupported. Some browser content and rich-text editors may not work.
+2. **Windows Replace is conditional and experimental.** The app checks the target window, process, selection and editability before attempting a Unicode-keyboard replacement. A focus change or unsupported control causes it to refuse. In rare cases, an editor may accept only part of the injected input. Always test with throwaway text and use Undo if needed. Copy is the fallback.
+3. **macOS Replace remains copy-only.** The macOS native capture path uses Accessibility APIs. Real MacBook tests of permissions, focus, shortcuts and selection across editors are still needed.
+4. **Unsigned or unnotarized installers may trigger OS warnings.** Signing and notarization are not guaranteed for early CI builds. Verify source, architecture and authenticity before installing.
+5. **Cloud AI requires a provider and consent.** A saved provider must be marked **Active** using **Use**. Provider **Test** alone is insufficient. Requests are subject to the provider's terms, outages, token limits and charges.
+6. **Custom Suggestions depend on structured model output.** Some providers and models may still produce invalid responses despite resilient parsing/retry logic. Fixed actions can work even when suggestion analysis fails.
+7. **Offline grammar is primarily English.** Roman Urdu, Urdu and code-mixed text rely on a compatible cloud model for rewriting. The local lexical database covers English, and broad Moby associations are not guaranteed interchangeable synonyms.
+8. **Global shortcuts can conflict with other apps.** Some apps or operating systems reserve key combinations; change shortcuts in Settings if needed.
+9. **Dictionary source hashes and third-party notices need release review.** The build pipeline has warned that upstream source hashes were not independently pinned. A public beta maintainer should confirm source provenance, correct license notices and the shipped lexical database before broad distribution.
+10. **No general-purpose offline AI model or end-to-end writing-history service.** Offline features are grammar and lexical lookup; generative actions send text to the configured provider after user action and consent.
+
+Report reproducible bugs via [GitHub Issues](https://github.com/ashjjvd/AiWriterAssist/issues). Never include API keys, private documents or sensitive prompts in public reports.

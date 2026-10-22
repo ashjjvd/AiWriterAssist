@@ -1,42 +1,35 @@
-# Architecture
+# Architecture overview — v0.2.0 beta
 
-- Tauri 2 hosts two windows (settings and reusable assistant), a global shortcut,
-  tray, secure storage, native selection, grammar, thesaurus, SQLite and AI traffic.
-- React/TypeScript UI uses typed Tauri commands, event listeners and an explicit
-  workflow phase (`src/store/assistant.ts`). Selected text lives in the Rust
-  in-memory session registry and UI state, never in the user SQLite database.
-- `storage` holds settings, credential *references*, provider and proxy records,
-  personal spellings. `security` uses OS credential APIs through `keyring`.
-- `network` creates HTTPS-validating reqwest clients with direct, system or one
-  explicit proxy; Direct mode calls `no_proxy()`. SOCKS5H uses the SOCKS URL
-  scheme for remote DNS resolution. Current client creation does not implement
-  reuse/cache yet.
-- `ai` has a protocol switch for Chat Completions, OpenAI Responses and Anthropic
-  Messages, with SSE handling for the supported delta events. Provider registry
-  routes eight configured families. Zen routing recognizes common model families,
-  but a live provider catalog is required for complete routing metadata.
-- `platform` uses Windows UIA TextPattern or macOS AXSelectedText. Without an
-  accessible selection it returns an error rather than making up text.
-- Automatic text replacement is conservatively `copy_only`, because robust
-  selection re-identification across applications is not implemented. No blind
-  clipboard insertion is attempted.
-- `grammar` uses Harper curated parsing and real rule output; Unicode scalar
-  offsets are converted to UTF-16 for JavaScript. Urdu script is skipped by the
-  English-only offline grammar engine.
-- `thesaurus` reads an immutable bundled SQLite database. It fails explicitly
-  while the official source archive import is unavailable.
+AiWriterAssist is a **Tauri 2 desktop application** with a Rust native backend and a React/TypeScript frontend. Native builds are produced by GitHub Actions for Windows and macOS.
 
-## Security notes
+## Desktop UI
 
-Native capture only follows a user shortcut. No continuous input monitoring or
-clipboard history collection is implemented. Secure/password controls must not be
-read; supported OS text-selection APIs typically hide their contents. The selection
-service does not retain native handles across unsafe threads. Cloud requests require
-explicit consent and selection. Never add privileged tools to AI model access.
+- **Settings window:** General preferences, shortcuts, providers, proxies, Prompt Library, AI Prompts, privacy, dictionary and licensing information.
+- **Improve Writing popup:** A compact floating window launched by a global shortcut. Shows fixed action buttons and an optional custom instruction; **Custom Suggestions** is invoked separately and on demand.
+- **Synonyms popup:** A separate, meaning-focused view backed by the offline lexical database.
+- **Popup behavior:** `Esc` closes the popup, headers can be dragged and contents resize/scroll for long selections and results.
 
-## Known architectural debt
+## Native services
 
-Reliable cross-application replacement, full clipboard fallback, resilient Unicode
-SSE decoding, native behavior in target OSs, cache lifecycle, source-aware network
-error normalization, complete Zen model metadata, complete license scan and actual
-package builds remain outstanding. See KNOWN_LIMITATIONS.md.
+- **Text selection:** Windows uses UI Automation; macOS uses Accessibility APIs. Password/secure fields and inaccessible ranges must not be captured.
+- **Replacement:** Windows has a guarded editor/selection verification path followed by Unicode keyboard injection; it can fail safely and must be tested per editor. macOS is copy-only in this beta.
+- **Settings:** Structured settings and provider metadata persist locally. Provider credentials are stored using operating-system secure credential facilities rather than in plaintext settings.
+- **AI:** Provider adapters and configurable network/proxy routes submit text only after an explicit user request and cloud consent. Fixed actions use saved instructions; Custom Suggestions uses a separate editable analysis prompt and structured AI response parsing.
+- **Local language features:** Harper provides offline English grammar checks. A generated SQLite resource holds Open English WordNet and Moby lexical data for synonym lookups.
+
+## Workflow
+
+1. A user selects text in another editor and invokes a configured shortcut.
+2. The native selection service captures the selection where supported and provides an in-memory session to the appropriate popup.
+3. The popup displays fixed actions without a cloud request.
+4. A fixed action sends selected text with that saved instruction; Custom Suggestions sends selected text for analysis only when clicked.
+5. The generated result is shown for review and can be copied, or conditionally replaced on supported Windows controls.
+
+## Security and development considerations
+
+- Cloud consent is required. Provider connection tests are explicit network requests.
+- The app does not offer an offline generative language model and should not imply that cloud rewrites remain on-device.
+- Native text replacement, accessibility and shortcut handling depend on the destination editor and operating system.
+- Automated builds do not replace manual end-user testing, source-provenance checks or distribution signing/notarization.
+
+See [Known limitations](KNOWN_LIMITATIONS.md), [Testing](TESTING.md) and [Release checklist](RELEASE_CHECKLIST.md).
