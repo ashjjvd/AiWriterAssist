@@ -4,7 +4,7 @@ import {analysisSchema,type AppSettings,type SelectionSession,type GrammarResult
 export const api={
  settings:()=>invoke<AppSettings>('get_app_settings'),setting:(key:string,value:string)=>invoke<void>('update_app_settings',{key,value}),
  session:()=>invoke<SelectionSession|null>('get_selection_session'),replace:(sessionId:string,text:string)=>invoke<void>('replace_selection',{sessionId,text}),
- hide:()=>invoke<void>('hide_assistant'),show:()=>invoke<void>('show_assistant'),openSettings:()=>invoke<void>('open_settings'),shortcut:(shortcut:string)=>invoke<void>('set_global_shortcut',{shortcut}),
+ hide:()=>invoke<void>('hide_assistant'),hideSynonyms:()=>invoke<void>('hide_synonyms'),show:()=>invoke<void>('show_assistant'),openSettings:()=>invoke<void>('open_settings'),shortcut:(shortcut:string)=>invoke<void>('set_global_shortcut',{shortcut}),synonymShortcut:(shortcut:string)=>invoke<void>('set_synonym_shortcut',{shortcut}),
  grammar:(text:string)=>invoke<GrammarResult>('check_grammar',{text}),fix:(text:string,issue:GrammarIssue,replacement:string)=>invoke<string>('apply_grammar_correction',{text,issue,replacement}),
  fixAll:(text:string,edits:[GrammarIssue,string][])=>invoke<string>('apply_all_grammar_corrections',{text,edits}),
  words:()=>invoke<string[]>('list_personal_dictionary'),addWord:(word:string)=>invoke<void>('add_personal_dictionary_word',{word}),removeWord:(word:string)=>invoke<void>('remove_personal_dictionary_word',{word}),
