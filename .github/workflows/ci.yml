@@ -127,5 +127,15 @@ jobs:
       - name: Verify real lexical DB (release gate)
         run: python3 scripts/dictionaries/verify.py
 
+      - name: Verify Tauri CLI
+        run: pnpm exec tauri --version
+
       - name: Build native app
         run: pnpm tauri build
+
+      - name: Upload native installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: writer-assistant-${{ matrix.os }}
+          path: src-tauri/target/release/bundle/**
+          if-no-files-found: warn
