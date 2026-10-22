@@ -65,6 +65,7 @@ fn get_app_settings(state: State<'_, AppState>) -> Result<serde_json::Value> {
         "cloudConsent",
         "automaticAnalysis",
         "proxyMode",
+        "analysisSystemPrompt",
     ] {
         let default = match key {
             "theme" => "system",
@@ -72,12 +73,15 @@ fn get_app_settings(state: State<'_, AppState>) -> Result<serde_json::Value> {
             "synonymShortcut" => "CommandOrControl+Shift+D",
             "proxyMode" => "direct",
             "automaticAnalysis" => "true",
+            "analysisSystemPrompt" => ai::ANALYSIS_PROMPT,
             _ => "false",
         };
         map.insert(
             key.into(),
             serde_json::Value::String(
-                storage::get_setting(&state.store, key)?.unwrap_or_else(|| default.into()),
+                storage::get_setting(&state.store, key)?
+                    .filter(|v| key != "analysisSystemPrompt" || !v.trim().is_empty())
+                    .unwrap_or_else(|| default.into()),
             ),
         );
     }
@@ -89,6 +93,9 @@ fn update_app_settings(state: State<'_, AppState>, key: String, value: String) -
         "theme" => ["system", "light", "dark"].contains(&value.as_str()),
         "cloudConsent" | "automaticAnalysis" => ["true", "false"].contains(&value.as_str()),
         "proxyMode" => ["system", "direct"].contains(&value.as_str()),
+        "analysisSystemPrompt" => {
+            value.is_empty() || (!value.trim().is_empty() && value.len() <= 8000)
+        },
         _ => false,
     };
     if !valid {
@@ -515,14 +522,18 @@ async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai:
     let p = selected_provider(&state)?;
     let mode = get_mode(&state, &p)?;
     let profiles = storage::list_proxies(&state.store)?;
-    let output = ai::generate_once(&p, &profiles, &mode, ai::ANALYSIS_PROMPT, &text).await?;
+    let system_prompt = storage::get_setting(&state.store, "analysisSystemPrompt")?
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| ai::ANALYSIS_PROMPT.to_owned());
+    let output = ai::generate_once(&p, &profiles, &mode, &system_prompt, &text).await?;
     match ai::parse_analysis(&output) {
         Ok(analysis) => Ok(analysis),
         Err(_) => {
             // A small second request helps providers that ignore the full JSON schema.
             // No provider output or selected text is logged or persisted.
+            let retry_prompt = format!("{}\n\n{}", system_prompt, ai::ANALYSIS_RETRY_PROMPT);
             let retry =
-                ai::generate_once(&p, &profiles, &mode, ai::ANALYSIS_RETRY_PROMPT, &text).await?;
+                ai::generate_once(&p, &profiles, &mode, &retry_prompt, &text).await?;
             ai::parse_analysis(&retry)
         }
     }

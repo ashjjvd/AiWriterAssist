@@ -2,11 +2,11 @@ import {useEffect,useState} from 'react';
 import {BookText,Cloud,Lock,Monitor,Network,PenLine,Settings,ShieldCheck} from 'lucide-react';
 import {api} from '../../services/tauriClient';
 import {errorMessage,type AppSettings} from '../../types';
-import {Button,Card,Input,Label,Notice} from '../../components/ui/primitives';
+import {Button,Card,Input,Label,Notice,Textarea} from '../../components/ui/primitives';
 import {ConfirmDialog} from '../../components/ui/dialog';
 import ProviderSettings from '../providers/ProviderSettings';
 import ProxySettings from '../proxies/ProxySettings';
-type Section='general'|'providers'|'proxies'|'dictionary'|'privacy'|'about';
+type Section='general'|'providers'|'prompts'|'proxies'|'dictionary'|'privacy'|'about';
 function General(){const [settings,setSettings]=useState<AppSettings|null>(null),[shortcut,setShortcut]=useState(''),[synonymShortcut,setSynonymShortcut]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState('');
  useEffect(()=>{void api.settings().then(s=>{setSettings(s);setShortcut(s.shortcut);setSynonymShortcut(s.synonymShortcut)}).catch(e=>setError(errorMessage(e)))},[]);
  const update=async(key:string,value:string)=>{try{await api.setting(key,value);setSettings(s=>s?{...s,[key]:value}:s);if(key==='theme'){document.documentElement.classList.toggle('dark',value==='dark'||(value==='system'&&matchMedia('(prefers-color-scheme: dark)').matches))}}catch(e){setError(errorMessage(e))}};
@@ -24,10 +24,53 @@ function Privacy(){const [settings,setSettings]=useState<AppSettings|null>(null)
  <Card className="space-y-3"><h3 className="font-semibold">Cloud AI consent</h3><p className="text-sm text-foreground/70">Offline Harper grammar and thesaurus searches remain on your computer. AI requests send only explicitly selected text to the provider you configure, subject to that provider's privacy policy.</p><label className="flex items-center gap-3"><input type="checkbox" checked={settings?.cloudConsent==='true'} onChange={e=>{if(e.target.checked)setConfirmConsent(true);else void change('cloudConsent',false)}}/>Allow selected text to be sent to configured cloud models</label><label className="flex items-center gap-3"><input type="checkbox" disabled={settings?.cloudConsent!=='true'} checked={settings?.automaticAnalysis==='true'} onChange={e=>void change('automaticAnalysis',e.target.checked)}/>Automatically analyze when I invoke my shortcut</label></Card>
  <Card className="space-y-2"><h3 className="font-semibold">Accessibility permission</h3><p className="text-sm opacity-70">{permission===null?'Checking permission…':permission?'Available or not required on this platform':'Permission missing — selected text cannot be captured.'}</p><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>void api.openPermissions().catch(e=>setErr(errorMessage(e)))}>Open system permissions</Button><Button variant="outline" onClick={()=>void api.permissions().then(setPermission).catch(e=>setErr(errorMessage(e)))}>Recheck permissions</Button></div></Card><ConfirmDialog open={confirmConsent} onOpenChange={setConfirmConsent} title="Allow cloud analysis?" description="When you invoke writing assistance, the selected text may be sent to your configured AI provider. Each provider has its own policies. You can revoke consent at any time." confirmLabel="I consent" onConfirm={()=>{setConfirmConsent(false);void change('cloudConsent',true)}}/></div>
 }
+function AiPrompts(){
+ const [prompt,setPrompt]=useState('');
+ const [savedPrompt,setSavedPrompt]=useState('');
+ const [loading,setLoading]=useState(true);
+ const [saving,setSaving]=useState(false);
+ const [error,setError]=useState('');
+ const [message,setMessage]=useState('');
+ useEffect(()=>{
+  let active=true;
+  void api.settings().then(s=>{
+   if(!active)return;
+   setPrompt(s.analysisSystemPrompt);setSavedPrompt(s.analysisSystemPrompt);setLoading(false);
+  }).catch(e=>{if(active){setError(errorMessage(e));setLoading(false)}});
+  return ()=>{active=false};
+ },[]);
+ const update=async(value:string)=>{
+  setSaving(true);setError('');setMessage('');
+  try{
+   await api.setting('analysisSystemPrompt',value);
+   const settings=await api.settings();
+   setSavedPrompt(settings.analysisSystemPrompt);
+   setPrompt(settings.analysisSystemPrompt);
+   setMessage(value?'System prompt saved. Applies to the next analysis.':'Default system prompt restored.');
+  }catch(e){setError(errorMessage(e))}
+  finally{setSaving(false)}
+ };
+ return <div className="space-y-4">
+  <div><h2 className="text-lg font-semibold">AI Prompts</h2><p className="text-sm opacity-60">Customize automatic writing suggestions.</p></div>
+  {error&&<Notice kind="error">{error}</Notice>}{message&&<Notice>{message}</Notice>}
+  <Card className="space-y-3">
+   <Label>Suggestions system prompt</Label>
+   <p className="text-xs text-foreground/70">Controls the short action chips shown when you select text. Keep the output JSON instructions intact for compatibility. Your selected text remains subject to Privacy consent.</p>
+   <Textarea aria-label="Suggestions system prompt" value={prompt} disabled={loading||saving} onChange={e=>{setPrompt(e.target.value);setMessage('')}} rows={14} maxLength={8000} spellCheck={false} className="min-h-64 font-mono text-xs leading-5"/>
+   <div className="flex flex-wrap items-center justify-between gap-2">
+    <span className="text-xs opacity-60">{prompt.length} / 8000 characters</span>
+    <div className="flex gap-2">
+     <Button variant="outline" disabled={loading||saving} onClick={()=>void update('')}>Reset to default</Button>
+     <Button disabled={loading||saving||!prompt.trim()||prompt===savedPrompt} onClick={()=>void update(prompt)}>Save prompt</Button>
+    </div>
+   </div>
+  </Card>
+ </div>
+}
 function Dictionary(){const [words,setWords]=useState<string[]>([]),[word,setWord]=useState(''),[err,setErr]=useState('');const refresh=()=>api.words().then(setWords).catch(e=>setErr(errorMessage(e)));
  useEffect(()=>{void refresh()},[]);
  return <div className="space-y-4"><div><h2 className="text-lg font-semibold">Personal dictionary</h2><p className="text-sm opacity-60">Saved words suppress matching Harper spelling warnings.</p></div>{err&&<Notice kind="error">{err}</Notice>}<Card className="space-y-3"><Label>New word</Label><div className="flex gap-2"><Input value={word} onChange={e=>setWord(e.target.value)} placeholder="e.g. product terminology"/><Button onClick={()=>void api.addWord(word).then(()=>{setWord('');return refresh()}).catch(e=>setErr(errorMessage(e)))} disabled={!word.trim()}>Add</Button></div>{words.map(w=><div className="flex items-center justify-between border-t border-border py-2" key={w}>{w}<Button variant="ghost" onClick={()=>void api.removeWord(w).then(refresh).catch(e=>setErr(errorMessage(e)))}>Remove</Button></div>)}</Card></div>
 }
-const tabs:[Section,typeof Settings,string][]=[['general',Settings,'General'],['providers',Cloud,'AI providers'],['proxies',Network,'Proxies'],['dictionary',BookText,'Dictionary'],['privacy',Lock,'Privacy'],['about',ShieldCheck,'About & licenses']];
+const tabs:[Section,typeof Settings,string][]=[['general',Settings,'General'],['providers',Cloud,'AI providers'],['prompts',PenLine,'AI Prompts'],['proxies',Network,'Proxies'],['dictionary',BookText,'Dictionary'],['privacy',Lock,'Privacy'],['about',ShieldCheck,'About & licenses']];
 export default function SettingsWindow(){const [active,setActive]=useState<Section>('general');return <div className="flex min-h-screen bg-background"><aside className="w-60 shrink-0 border-r border-border bg-card p-4"><div className="mb-8 flex items-center gap-2 px-2"><div className="rounded-lg bg-primary p-2 text-white"><PenLine size={18}/></div><div><p className="font-semibold">Writer Assistant</p><p className="text-xs opacity-50">Desktop settings</p></div></div><nav aria-label="Settings navigation" className="space-y-1">{tabs.map(([id,Icon,label])=><button key={id} onClick={()=>setActive(id)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${active===id?'bg-muted font-semibold text-primary':'hover:bg-muted'}`}><Icon size={17}/>{label}</button>)}</nav><p className="mt-10 px-3 text-[11px] opacity-40">v0.2.0 · Local-first</p></aside>
- <main className="min-w-0 flex-1 px-8 py-8"><div className="mx-auto max-w-3xl">{active==='general'&&<General/>}{active==='providers'&&<ProviderSettings/>}{active==='proxies'&&<ProxySettings/>}{active==='dictionary'&&<Dictionary/>}{active==='privacy'&&<Privacy/>}{active==='about'&&<div className="space-y-4"><h2 className="text-lg font-semibold">About & open-source licenses</h2><Card><div className="flex items-center gap-2"><Monitor size={20}/><strong>Writer Assistant</strong></div><p className="mt-2 text-sm opacity-70">Built with Tauri 2, Rust, React, Harper and official lexical resources.</p></Card><Card className="space-y-2"><h3 className="font-semibold">Acknowledgements</h3><p className="text-sm">Harper — open-source grammar. Moby Thesaurus II — public-domain release by Grady Ward. Open English WordNet — CC BY 4.0 (and original Princeton notices). Read docs/THIRD_PARTY_LICENSES.md for upstream URLs and exact attribution.</p></Card></div>}</div></main></div>}
+ <main className="min-w-0 flex-1 px-8 py-8"><div className="mx-auto max-w-3xl">{active==='general'&&<General/>}{active==='providers'&&<ProviderSettings/>}{active==='prompts'&&<AiPrompts/>}{active==='proxies'&&<ProxySettings/>}{active==='dictionary'&&<Dictionary/>}{active==='privacy'&&<Privacy/>}{active==='about'&&<div className="space-y-4"><h2 className="text-lg font-semibold">About & open-source licenses</h2><Card><div className="flex items-center gap-2"><Monitor size={20}/><strong>Writer Assistant</strong></div><p className="mt-2 text-sm opacity-70">Built with Tauri 2, Rust, React, Harper and official lexical resources.</p></Card><Card className="space-y-2"><h3 className="font-semibold">Acknowledgements</h3><p className="text-sm">Harper — open-source grammar. Moby Thesaurus II — public-domain release by Grady Ward. Open English WordNet — CC BY 4.0 (and original Princeton notices). Read docs/THIRD_PARTY_LICENSES.md for upstream URLs and exact attribution.</p></Card></div>}</div></main></div>}
