@@ -59,13 +59,17 @@ fn selected_provider(state: &AppState) -> Result<ProviderConfig> {
 fn get_app_settings(state: State<'_, AppState>) -> Result<serde_json::Value> {
     let mut map = serde_json::Map::new();
     for key in [
-        "theme", "shortcut", "synonymShortcut", "cloudConsent",
+        "theme",
+        "shortcut",
+        "synonymShortcut",
+        "cloudConsent",
         "automaticAnalysis",
         "proxyMode",
     ] {
         let default = match key {
             "theme" => "system",
-            "shortcut" => "CommandOrControl+Shift+Space", "synonymShortcut" => "CommandOrControl+Shift+D",
+            "shortcut" => "CommandOrControl+Shift+Space",
+            "synonymShortcut" => "CommandOrControl+Shift+D",
             "proxyMode" => "direct",
             "automaticAnalysis" => "true",
             _ => "false",
@@ -159,32 +163,53 @@ fn hide_synonyms(app: tauri::AppHandle) -> Result<()> {
 }
 
 fn show_synonyms_popup(app: &tauri::AppHandle) -> Result<()> {
-    let popup = app.get_webview_window("synonyms")
+    let popup = app
+        .get_webview_window("synonyms")
         .ok_or_else(|| AppError::internal("Synonyms window missing"))?;
     if let Ok(Some(monitor)) = popup.current_monitor() {
         let area = monitor.work_area();
         let width = 360_u32.min(area.size.width.saturating_sub(20));
         let height = 450_u32.min(area.size.height.saturating_sub(20));
-        let _ = popup.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(width, height)));
+        let _ = popup.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+            width, height,
+        )));
         let x = area.position.x + ((area.size.width.saturating_sub(width)) / 2) as i32;
         let y = area.position.y + ((area.size.height.saturating_sub(height)) / 4) as i32;
-        let _ = popup.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(x, y)));
+        let _ = popup.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(
+            x, y,
+        )));
     }
     popup.show().map_err(AppError::internal)?;
     popup.set_focus().map_err(AppError::internal)
 }
 
 #[tauri::command]
-fn set_synonym_shortcut(app: tauri::AppHandle, state: State<'_, AppState>, shortcut: String) -> Result<()> {
+fn set_synonym_shortcut(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    shortcut: String,
+) -> Result<()> {
     if shortcut.len() > 100 || !shortcut.contains('+') {
-        return Err(AppError::new("INVALID_SHORTCUT", "Shortcut needs modifiers and a key.", "Example: CommandOrControl+Shift+D"));
+        return Err(AppError::new(
+            "INVALID_SHORTCUT",
+            "Shortcut needs modifiers and a key.",
+            "Example: CommandOrControl+Shift+D",
+        ));
     }
     let old = storage::get_setting(&state.store, "synonymShortcut")?
         .unwrap_or_else(|| "CommandOrControl+Shift+D".to_string());
-    if shortcut == old { return Ok(()); }
-    app.global_shortcut().register(shortcut.as_str()).map_err(|_| {
-        AppError::new("SHORTCUT_CONFLICT", "Unable to register synonyms shortcut.", "Choose a different shortcut.")
-    })?;
+    if shortcut == old {
+        return Ok(());
+    }
+    app.global_shortcut()
+        .register(shortcut.as_str())
+        .map_err(|_| {
+            AppError::new(
+                "SHORTCUT_CONFLICT",
+                "Unable to register synonyms shortcut.",
+                "Choose a different shortcut.",
+            )
+        })?;
     if let Err(e) = storage::put_setting(&state.store, "synonymShortcut", &shortcut) {
         let _ = app.global_shortcut().unregister(shortcut.as_str());
         return Err(e);
@@ -193,7 +218,9 @@ fn set_synonym_shortcut(app: tauri::AppHandle, state: State<'_, AppState>, short
     Ok(())
 }
 fn show_popup(app: &tauri::AppHandle) -> Result<()> {
-    if let Some(other) = app.get_webview_window("synonyms") { let _ = other.hide(); }
+    if let Some(other) = app.get_webview_window("synonyms") {
+        let _ = other.hide();
+    }
     let popup = app
         .get_webview_window("assistant")
         .ok_or_else(|| AppError::internal("Assistant window missing"))?;
@@ -607,7 +634,9 @@ fn begin_capture(app: tauri::AppHandle, synonyms: bool) {
         let result = selection::capture();
         let target = if synonyms { "synonyms" } else { "assistant" };
         if synonyms {
-            if let Some(other) = app.get_webview_window("assistant") { let _ = other.hide(); }
+            if let Some(other) = app.get_webview_window("assistant") {
+                let _ = other.hide();
+            }
         }
         let state = app.state::<AppState>();
         match result {
@@ -615,14 +644,22 @@ fn begin_capture(app: tauri::AppHandle, synonyms: bool) {
                 if let Ok(mut lock) = state.sessions.0.lock() {
                     *lock = Some(session.clone())
                 }
-                let _ = if synonyms { show_synonyms_popup(&app) } else { show_popup(&app) };
+                let _ = if synonyms {
+                    show_synonyms_popup(&app)
+                } else {
+                    show_popup(&app)
+                };
                 let _ = app.emit_to(target, "selection://captured", session);
             }
             Err(e) => {
                 if let Ok(mut lock) = state.sessions.0.lock() {
                     *lock = None
                 }
-                let _ = if synonyms { show_synonyms_popup(&app) } else { show_popup(&app) };
+                let _ = if synonyms {
+                    show_synonyms_popup(&app)
+                } else {
+                    show_popup(&app)
+                };
                 let _ = app.emit_to(target, "selection://failed", e);
             }
         }
@@ -658,7 +695,8 @@ fn setup(app: &mut tauri::App) -> std::result::Result<(), Box<dyn std::error::Er
         .unwrap_or_else(|| "CommandOrControl+Shift+D".into());
     if let Err(error) = app.global_shortcut().register(synonym_shortcut.as_str()) {
         eprintln!("Synonyms shortcut registration failed (configuration conflict): {error}");
-    }let open = MenuItem::with_id(app, "assistant", "Open Assistant", true, None::<&str>)?;
+    }
+    let open = MenuItem::with_id(app, "assistant", "Open Assistant", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let pause = MenuItem::with_id(app, "pause", "Pause Global Shortcut", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -697,13 +735,19 @@ pub fn run() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
                     if event.state == ShortcutState::Pressed {
-                        let configured = storage::get_setting(&app.state::<AppState>().store, "synonymShortcut")
-                            .ok().flatten().unwrap_or_else(|| "CommandOrControl+Shift+D".into());
-                        let is_synonym = configured.parse::<tauri_plugin_global_shortcut::Shortcut>()
-                            .map(|item| item == *shortcut).unwrap_or(false);
+                        let configured =
+                            storage::get_setting(&app.state::<AppState>().store, "synonymShortcut")
+                                .ok()
+                                .flatten()
+                                .unwrap_or_else(|| "CommandOrControl+Shift+D".into());
+                        let is_synonym = configured
+                            .parse::<tauri_plugin_global_shortcut::Shortcut>()
+                            .map(|item| item == *shortcut)
+                            .unwrap_or(false);
                         begin_capture(app.clone(), is_synonym);
                     }
-                })                .build(),
+                })
+                .build(),
         )
         .setup(setup)
         .on_window_event(|window, event| {
@@ -721,8 +765,12 @@ pub fn run() {
             get_selection_session,
             replace_selection,
             show_assistant,
-            hide_assistant, hide_synonyms, open_settings,
-            set_global_shortcut, set_synonym_shortcut, pause_global_shortcut,
+            hide_assistant,
+            hide_synonyms,
+            open_settings,
+            set_global_shortcut,
+            set_synonym_shortcut,
+            pause_global_shortcut,
             get_permission_status,
             open_permission_settings,
             check_grammar,
