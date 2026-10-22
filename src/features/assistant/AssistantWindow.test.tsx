@@ -3,7 +3,7 @@ import {render,screen,waitFor,fireEvent} from '@testing-library/react';
 import AssistantWindow from './AssistantWindow';
 const mock=vi.hoisted(()=>({listeners:new Map<string,(v:unknown)=>void>(),settings:vi.fn(),analyze:vi.fn(),rewrite:vi.fn(),cancel:vi.fn()}));
 vi.mock('../../services/tauriClient',()=>({
- api:{settings:mock.settings,analyze:mock.analyze,rewrite:mock.rewrite,cancel:mock.cancel,openSettings:vi.fn(),hide:vi.fn()},
+ api:{settings:mock.settings,analyze:mock.analyze,rewrite:mock.rewrite,cancel:mock.cancel,openSettings:vi.fn().mockResolvedValue(undefined),hide:vi.fn()},
  events:{captured:async(fn:(s:unknown)=>void)=>{mock.listeners.set('captured',fn);return()=>{};},cleared:async(fn:(s:unknown)=>void)=>{mock.listeners.set('cleared',fn);return()=>{};},failed:async(fn:(s:unknown)=>void)=>{mock.listeners.set('failed',fn);return()=>{};},ai:async(kind:string,fn:(s:unknown)=>void)=>{mock.listeners.set(kind,fn);return()=>{};}}
 }));
 vi.mock('@tauri-apps/plugin-clipboard-manager',()=>({writeText:vi.fn()}));

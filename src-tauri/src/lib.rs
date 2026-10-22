@@ -514,15 +514,24 @@ async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai:
     }
     let p = selected_provider(&state)?;
     let mode = get_mode(&state, &p)?;
-    let output = ai::generate_once(
-        &p,
-        &storage::list_proxies(&state.store)?,
-        &mode,
-        ai::ANALYSIS_PROMPT,
-        &text,
-    )
-    .await?;
-    ai::parse_analysis(&output)
+    let profiles = storage::list_proxies(&state.store)?;
+    let output = ai::generate_once(&p, &profiles, &mode, ai::ANALYSIS_PROMPT, &text).await?;
+    match ai::parse_analysis(&output) {
+        Ok(analysis) => Ok(analysis),
+        Err(_) => {
+            // A small second request helps providers that ignore the full JSON schema.
+            // No provider output or selected text is logged or persisted.
+            let retry = ai::generate_once(
+                &p,
+                &profiles,
+                &mode,
+                ai::ANALYSIS_RETRY_PROMPT,
+                &text,
+            )
+            .await?;
+            ai::parse_analysis(&retry)
+        }
+    }
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
