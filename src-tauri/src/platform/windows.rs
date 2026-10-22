@@ -21,8 +21,8 @@ use windows::{
                 UIA_TextPatternId, UIA_ValuePatternId,
             },
             Input::KeyboardAndMouse::{
-                SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT,
-                KEYEVENTF_KEYUP, KEYEVENTF_UNICODE, VIRTUAL_KEY,
+                SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
+                KEYEVENTF_UNICODE, VIRTUAL_KEY,
             },
             WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow},
         },
@@ -114,11 +114,13 @@ pub fn read_selection() -> Result<NativeSelection> {
     unsafe {
         CoInitializeEx(None, COINIT_APARTMENTTHREADED)
             .ok()
-            .map_err(|_| AppError::new(
-                "ACCESSIBILITY_UNAVAILABLE",
-                "Windows UI Automation could not initialize.",
-                "Retry with an accessible text control.",
-            ))?;
+            .map_err(|_| {
+                AppError::new(
+                    "ACCESSIBILITY_UNAVAILABLE",
+                    "Windows UI Automation could not initialize.",
+                    "Retry with an accessible text control.",
+                )
+            })?;
         let result = (|| -> Result<NativeSelection> {
             let automation: IUIAutomation =
                 CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)
@@ -145,11 +147,13 @@ pub fn replace_selection(session: &SelectionSession, approved: &str) -> Result<(
         .strip_prefix("hwnd:")
         .and_then(|s| s.parse::<isize>().ok())
         .filter(|value| *value != 0)
-        .ok_or_else(|| AppError::new(
-            "SOURCE_UNAVAILABLE",
-            "The original editor could not be identified.",
-            "Copy the result and paste it manually.",
-        ))?;
+        .ok_or_else(|| {
+            AppError::new(
+                "SOURCE_UNAVAILABLE",
+                "The original editor could not be identified.",
+                "Copy the result and paste it manually.",
+            )
+        })?;
     let target = HWND(raw as *mut _);
     unsafe {
         if !IsWindow(Some(target)).as_bool() || !SetForegroundWindow(target).as_bool() {

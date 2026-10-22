@@ -99,9 +99,7 @@ pub fn replace(session: &SelectionSession, approved: &str) -> Result<()> {
             "Copy the result and paste it manually.",
         ));
     }
-    if hex::encode(Sha256::digest(session.captured_text.as_bytes()))
-        != session.captured_text_hash
-    {
+    if hex::encode(Sha256::digest(session.captured_text.as_bytes())) != session.captured_text_hash {
         return Err(AppError::new(
             "SESSION_CHANGED",
             "The captured text no longer matches the saved selection.",
