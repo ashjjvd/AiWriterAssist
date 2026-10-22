@@ -195,18 +195,28 @@ pub fn parse_analysis(raw: &str) -> Result<Analysis> {
         .or_else(|| payload.get("actions"))
         .or_else(|| payload.get("options"))
         .or_else(|| payload.get("recommendations"))
-        .or_else(|| if payload.is_array() { Some(payload) } else { None })
+        .or_else(|| {
+            if payload.is_array() {
+                Some(payload)
+            } else {
+                None
+            }
+        })
         .and_then(Value::as_array)
         .ok_or_else(invalid_response)?;
 
     let mut titles = std::collections::HashSet::new();
     let mut suggestions = Vec::new();
     for (index, row) in rows.iter().enumerate() {
-        let raw_title = row.as_str().or_else(|| {
-            analysis_text(row, &["title", "label", "name", "action"])
-        });
+        let raw_title = row
+            .as_str()
+            .or_else(|| analysis_text(row, &["title", "label", "name", "action"]));
         let Some(raw_title) = raw_title else { continue };
-        let title = raw_title.split_whitespace().take(3).collect::<Vec<_>>().join(" ");
+        let title = raw_title
+            .split_whitespace()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join(" ");
         if title.is_empty() || title.chars().count() > 36 || !titles.insert(title.to_lowercase()) {
             continue;
         }
@@ -255,9 +265,12 @@ pub fn parse_analysis(raw: &str) -> Result<Analysis> {
         return Err(invalid_response());
     }
     Ok(Analysis {
-        language: analysis_text(payload, &["language", "detected_language", "detectedLanguage"])
-            .unwrap_or("Undetermined")
-            .to_owned(),
+        language: analysis_text(
+            payload,
+            &["language", "detected_language", "detectedLanguage"],
+        )
+        .unwrap_or("Undetermined")
+        .to_owned(),
         script: analysis_text(payload, &["script", "writing_script", "writingScript"])
             .unwrap_or("Unknown")
             .to_owned(),
@@ -602,9 +615,12 @@ mod tests {
     }
     #[test]
     fn accepts_action_arrays_and_deduplicates() {
-        let analysis = parse_analysis(r#"{"actions":["Clarify","Concise","Clarify","Expand"]}"#).unwrap();
+        let analysis =
+            parse_analysis(r#"{"actions":["Clarify","Concise","Clarify","Expand"]}"#).unwrap();
         assert_eq!(analysis.suggestions.len(), 3);
-        assert!(!analysis.suggestions[0].transformation_instruction.is_empty());
+        assert!(!analysis.suggestions[0]
+            .transformation_instruction
+            .is_empty());
     }
     #[test]
     fn routes_zen_models() {

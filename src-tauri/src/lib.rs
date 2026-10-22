@@ -521,14 +521,8 @@ async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai:
         Err(_) => {
             // A small second request helps providers that ignore the full JSON schema.
             // No provider output or selected text is logged or persisted.
-            let retry = ai::generate_once(
-                &p,
-                &profiles,
-                &mode,
-                ai::ANALYSIS_RETRY_PROMPT,
-                &text,
-            )
-            .await?;
+            let retry =
+                ai::generate_once(&p, &profiles, &mode, ai::ANALYSIS_RETRY_PROMPT, &text).await?;
             ai::parse_analysis(&retry)
         }
     }
