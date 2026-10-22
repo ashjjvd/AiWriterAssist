@@ -95,7 +95,7 @@ fn update_app_settings(state: State<'_, AppState>, key: String, value: String) -
         "proxyMode" => ["system", "direct"].contains(&value.as_str()),
         "analysisSystemPrompt" => {
             value.is_empty() || (!value.trim().is_empty() && value.len() <= 8000)
-        },
+        }
         _ => false,
     };
     if !valid {
@@ -532,8 +532,7 @@ async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai:
             // A small second request helps providers that ignore the full JSON schema.
             // No provider output or selected text is logged or persisted.
             let retry_prompt = format!("{}\n\n{}", system_prompt, ai::ANALYSIS_RETRY_PROMPT);
-            let retry =
-                ai::generate_once(&p, &profiles, &mode, &retry_prompt, &text).await?;
+            let retry = ai::generate_once(&p, &profiles, &mode, &retry_prompt, &text).await?;
             ai::parse_analysis(&retry)
         }
     }
