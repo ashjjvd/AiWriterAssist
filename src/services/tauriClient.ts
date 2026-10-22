@@ -13,7 +13,7 @@ export const api={
  saveProviderSecret:(configId:string,secret:string)=>invoke<string>('save_provider_secret',{configId,secret}),setActive:(id:string)=>invoke<void>('set_active_provider',{id}),
  models:(id:string)=>invoke<string[]>('list_provider_models',{id}),testProvider:(id:string)=>invoke<ProviderTest>('test_provider_connection',{id}),
  proxies:()=>invoke<ProxyProfile[]>('list_proxy_profiles'),saveProxy:(profile:ProxyProfile)=>invoke<void>('save_proxy_profile',{profile}),deleteProxy:(id:string)=>invoke<void>('delete_proxy_profile',{id}),saveProxySecret:(profileId:string,secret:string)=>invoke<string>('save_proxy_secret',{profileId,secret}),testProxy:(profileId:string,providerId:string)=>invoke<ProviderTest>('test_proxy_connection',{profileId,providerId}),
- analyze:(text:string)=>invoke<unknown>('analyze_writing',{text}).then(value=>analysisSchema.parse(value)),rewrite:(input:{sessionId:string;requestId:string;text:string;instruction:string})=>invoke<void>('generate_rewrite',{input}),cancel:(requestId:string)=>invoke<void>('cancel_ai_request',{requestId}),
+ analyze:(text:string,excludedTitles:string[]=[])=>invoke<unknown>('analyze_writing',{text,excludedTitles}).then(value=>analysisSchema.parse(value)),rewrite:(input:{sessionId:string;requestId:string;text:string;instruction:string})=>invoke<void>('generate_rewrite',{input}),cancel:(requestId:string)=>invoke<void>('cancel_ai_request',{requestId}),
  permissions:()=>invoke<boolean>('get_permission_status'),openPermissions:()=>invoke<void>('open_permission_settings')
 };
 export const events={

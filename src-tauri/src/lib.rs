@@ -66,14 +66,16 @@ fn get_app_settings(state: State<'_, AppState>) -> Result<serde_json::Value> {
         "automaticAnalysis",
         "proxyMode",
         "analysisSystemPrompt",
+        "promptActions",
     ] {
         let default = match key {
             "theme" => "system",
             "shortcut" => "CommandOrControl+Shift+Space",
             "synonymShortcut" => "CommandOrControl+Shift+D",
             "proxyMode" => "direct",
-            "automaticAnalysis" => "true",
+            "automaticAnalysis" => "false",
             "analysisSystemPrompt" => ai::ANALYSIS_PROMPT,
+            "promptActions" => "",
             _ => "false",
         };
         map.insert(
@@ -96,6 +98,30 @@ fn update_app_settings(state: State<'_, AppState>, key: String, value: String) -
         "analysisSystemPrompt" => {
             value.is_empty() || (!value.trim().is_empty() && value.len() <= 8000)
         }
+        "promptActions" => {
+            value.len() <= 160_000
+                && serde_json::from_str::<Vec<serde_json::Value>>(&value)
+                    .map(|items| {
+                        let mut ids = std::collections::HashSet::new();
+                        items.len() <= 30
+                            && items.iter().all(|item| {
+                                let id = item.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                                let label = item.get("label").and_then(|v| v.as_str()).unwrap_or("");
+                                let instruction = item.get("instruction").and_then(|v| v.as_str()).unwrap_or("");
+                                !id.is_empty()
+                                    && id.len() <= 64
+                                    && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+                                    && ids.insert(id.to_owned())
+                                    && !label.trim().is_empty()
+                                    && label.chars().count() <= 32
+                                    && !instruction.trim().is_empty()
+                                    && instruction.chars().count() <= 4000
+                                    && item.get("enabled").and_then(|v| v.as_bool()).is_some()
+                                    && item.get("favorite").and_then(|v| v.as_bool()).is_some()
+                            })
+                    })
+                    .unwrap_or(false)
+        },
         _ => false,
     };
     if !valid {
@@ -504,7 +530,11 @@ async fn test_proxy_connection(
     })
 }
 #[tauri::command]
-async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai::Analysis> {
+async fn analyze_writing(
+    state: State<'_, AppState>,
+    text: String,
+    excluded_titles: Option<Vec<String>>,
+) -> Result<ai::Analysis> {
     if storage::get_setting(&state.store, "cloudConsent")?.as_deref() != Some("true") {
         return Err(AppError::new(
             "CONSENT_REQUIRED",
@@ -522,9 +552,20 @@ async fn analyze_writing(state: State<'_, AppState>, text: String) -> Result<ai:
     let p = selected_provider(&state)?;
     let mode = get_mode(&state, &p)?;
     let profiles = storage::list_proxies(&state.store)?;
-    let system_prompt = storage::get_setting(&state.store, "analysisSystemPrompt")?
+    let mut system_prompt = storage::get_setting(&state.store, "analysisSystemPrompt")?
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| ai::ANALYSIS_PROMPT.to_owned());
+    let excluded: Vec<String> = excluded_titles
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|title| !title.trim().is_empty() && title.len() <= 64)
+        .take(30)
+        .collect();
+    if !excluded.is_empty() {
+        system_prompt.push_str("\n\nFor this request, propose context-aware improvements OTHER than these existing fixed action labels: ");
+        system_prompt.push_str(&serde_json::to_string(&excluded).unwrap_or_else(|_| "[]".into()));
+        system_prompt.push_str(". Do not repeat or paraphrase the fixed buttons. Suggest distinct, specific ways to improve this source text.");
+    }
     let output = ai::generate_once(&p, &profiles, &mode, &system_prompt, &text).await?;
     match ai::parse_analysis(&output) {
         Ok(analysis) => Ok(analysis),
