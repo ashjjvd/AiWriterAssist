@@ -106,11 +106,17 @@ fn update_app_settings(state: State<'_, AppState>, key: String, value: String) -
                         items.len() <= 30
                             && items.iter().all(|item| {
                                 let id = item.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                                let label = item.get("label").and_then(|v| v.as_str()).unwrap_or("");
-                                let instruction = item.get("instruction").and_then(|v| v.as_str()).unwrap_or("");
+                                let label =
+                                    item.get("label").and_then(|v| v.as_str()).unwrap_or("");
+                                let instruction = item
+                                    .get("instruction")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
                                 !id.is_empty()
                                     && id.len() <= 64
-                                    && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+                                    && id
+                                        .chars()
+                                        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
                                     && ids.insert(id.to_owned())
                                     && !label.trim().is_empty()
                                     && label.chars().count() <= 32
@@ -121,7 +127,7 @@ fn update_app_settings(state: State<'_, AppState>, key: String, value: String) -
                             })
                     })
                     .unwrap_or(false)
-        },
+        }
         _ => false,
     };
     if !valid {
