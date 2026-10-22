@@ -21,3 +21,11 @@ pub fn read_native_selection() -> Result<NativeSelection> {
         ))
     }
 }
+
+#[cfg(target_os = "windows")]
+pub fn replace_native_selection(
+    session: &crate::selection::SelectionSession,
+    text: &str,
+) -> Result<()> {
+    windows::replace_selection(session, text)
+}

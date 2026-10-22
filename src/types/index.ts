@@ -1,7 +1,7 @@
 import {z} from 'zod';
 export type AppError={code:string;message:string;recovery:string};
 export type AppSettings={theme:'system'|'light'|'dark';shortcut:string;synonymShortcut:string;cloudConsent:string;automaticAnalysis:string;proxyMode:string;analysisSystemPrompt:string;promptActions:string};
-export type SelectionSession={sessionId:string;sourcePlatform:string;sourceProcessId:number;sourceWindowIdentifier:string;capturedText:string;capturedTextHash:string;capturedAt:number;replacementCapability:'copy_only'|'native'|'guarded_paste';captureWarning?:string;selectionIsEditable:boolean};
+export type SelectionSession={sessionId:string;sourcePlatform:string;sourceProcessId:number;sourceWindowIdentifier:string;capturedText:string;capturedTextHash:string;capturedAt:number;replacementCapability:'copy_only'|'native'|'guarded_paste'|'verified_keyboard_replace';captureWarning?:string;selectionIsEditable:boolean};
 export type GrammarIssue={issueId:string;startOffset:number;endOffset:number;originalText:string;category:string;priority:number;explanation:string;suggestions:string[];ruleIdentifier:string};
 export type GrammarResult={issues:GrammarIssue[];analyzedCharacterCount:number;durationMs:number;warnings:string[]};
 export type Synonym={term:string;partOfSpeech:string;relationType:string;definition?:string;source:string;relevanceScore:number;usageWarning?:string};

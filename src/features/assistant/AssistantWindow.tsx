@@ -43,8 +43,8 @@ export default function AssistantWindow(){
     const resize=(force=false)=>{
       cancelAnimationFrame(frame);
       frame=requestAnimationFrame(()=>{
-        const maximum=Math.min(700,Math.max(320,window.screen.availHeight-64));
-        const target=Math.min(maximum,Math.max(265,Math.ceil(content.scrollHeight+77)));
+        const maximum=Math.min(690,Math.max(260,window.screen.availHeight-56));
+        const target=Math.min(maximum,Math.max(210,Math.ceil(content.scrollHeight+64)));
         if(!force&&Math.abs(target-lastHeight)<3)return;
         lastHeight=target;
         void getCurrentWindow().setSize(new LogicalSize(420,target)).catch(()=>{});
@@ -127,9 +127,36 @@ export default function AssistantWindow(){
     return()=>{live=false;analysisToken.current++;unsub.forEach(fn=>fn());};
   },[openSession]);
 
-  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')void api.hide();};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[]);
+  // Handle Escape in the capture phase, even when a textarea or embedded widget has focus.
+  useEffect(()=>{
+    const onEscape=(event:KeyboardEvent)=>{
+      if(event.key!=='Escape'||event.isComposing)return;
+      event.preventDefault();
+      event.stopPropagation();
+      void api.hide().catch(()=>{});
+    };
+    document.addEventListener('keydown',onEscape,true);
+    return()=>document.removeEventListener('keydown',onEscape,true);
+  },[]);
   const copy=async(t:string)=>{try{await writeText(t);}catch(e){setError(toMessage(e));}};
-  const replace=async()=>{if(!session||phase!=='RESULT_READY')return;setPhase('APPLYING');try{await api.replace(session.sessionId,result);setPhase('READY');}catch(e){setError(toMessage(e));setPhase('RESULT_READY');}};
+  const replace=async()=>{
+    if(!session||phase!=='RESULT_READY'||!result.trim())return;
+    if(session.replacementCapability==='copy_only'){
+      setError('This editor does not support verified replacement. Use Copy instead.');
+      return;
+    }
+    setPhase('APPLYING');
+    try{
+      await api.replace(session.sessionId,result);
+      // Return to the source application rather than leaving a floating window over the edit.
+      await api.hide();
+    }catch(e){setError(toMessage(e));setPhase('RESULT_READY');}
+  };
+  const dragPopup=()=>{
+    if('__TAURI_INTERNALS__' in window){
+      void getCurrentWindow().startDragging().catch(()=>{});
+    }
+  };
   const cancel=()=>{if(activeRequest.current)void api.cancel(activeRequest.current);};
   const enabled=actions.filter(a=>a.enabled);
   const favorites=enabled.filter(a=>a.favorite);
@@ -139,24 +166,27 @@ export default function AssistantWindow(){
   const busy=disabledPhase(phase);
 
   return <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/70 px-3.5">
-      <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles size={16} className="text-primary"/>Improve Writing</div>
+    <header className="flex h-11 shrink-0 items-center justify-between border-b border-border/70 px-3" aria-label="Drag popup header">
+      <div className="flex min-w-0 flex-1 cursor-move select-none items-center gap-2 text-[13px] font-semibold" onMouseDown={event=>{if(event.button===0)dragPopup();}} title="Drag to move popup"><Sparkles size={15} className="text-primary"/>Improve Writing</div>
       <div className="flex items-center gap-0.5"><button aria-label="Settings" title="Settings" className="rounded-md p-1.5 text-foreground/60 hover:bg-muted hover:text-foreground" onClick={()=>void api.openSettings().catch(e=>setError(toMessage(e)))}><Settings2 size={16}/></button><button aria-label="Close" className="rounded-md p-1.5 text-foreground/60 hover:bg-muted hover:text-foreground" onClick={()=>void api.hide()}><X size={17}/></button></div>
     </header>
-    <main className="scrollarea min-h-0 flex-1 overflow-y-auto px-3 py-3">
-      <div ref={contentRef} className="space-y-2.5">
-        {session&&<div className="rounded-lg border border-border/80 bg-card px-3 py-2">
+    <main className="scrollarea min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
+      <div ref={contentRef} className="space-y-2">
+        {session&&<div className="rounded-lg border border-border/80 bg-card px-2.5 py-1.5">
           <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-medium uppercase tracking-wide text-foreground/45">Selected text</span><button aria-label="Copy selected text" className="rounded p-1 text-foreground/45 hover:text-primary" onClick={()=>void copy(draft)}><ClipboardCopy size={14}/></button></div>
-          <p dir="auto" className="text-content max-h-[68px] overflow-y-auto pr-1 text-[13px] leading-5">{draft}</p>
+          <p dir="auto" className="text-content max-h-[60px] overflow-y-auto pr-1 text-[13px] leading-[19px]">{draft}</p>
         </div>}
         {!session&&phase==='IDLE'&&<p className="py-4 text-center text-xs text-foreground/60">Select text and press your shortcut.</p>}
         {error&&<Notice kind="error">{error}</Notice>}
         {session&&<>
           <div className="flex flex-wrap gap-1.5" aria-label="Saved writing actions">
             {primary.map(action=><button key={action.id} title={action.instruction} disabled={busy} onClick={()=>void runGeneration(action.instruction,'')} className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary disabled:opacity-40">{action.label}</button>)}
-            {extra.length>0&&<button aria-expanded={more} aria-label="More actions" onClick={()=>setMore(v=>!v)} className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-foreground/60 hover:bg-muted">More {more?<ChevronUp size={12}/>:<ChevronDown size={12}/>}</button>}
+            <button aria-expanded={more} aria-label="More actions" onClick={()=>setMore(v=>!v)} className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-1.5 text-xs text-foreground/60 hover:bg-muted">More {more?<ChevronUp size={12}/>:<ChevronDown size={12}/>}</button>
           </div>
-          {more&&extra.length>0&&<div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2" aria-label="Additional writing actions">{extra.map(action=><button key={action.id} disabled={busy} onClick={()=>void runGeneration(action.instruction,'')} className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs hover:bg-muted disabled:opacity-40">{action.label}</button>)}</div>}
+          {more&&<div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-2" aria-label="Additional writing actions">
+            {extra.map(action=><button key={action.id} disabled={busy} onClick={()=>void runGeneration(action.instruction,'')} className="rounded-md border border-border bg-card px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-40">{action.label}</button>)}
+            <button className="rounded-md border border-border bg-card px-2 py-1.5 text-xs hover:bg-muted" onClick={()=>{setShowGrammar(v=>!v);setMore(false);}}>{showGrammar?'Hide local grammar':'Local grammar'}</button>
+          </div>}
           <div className="border-t border-border/60 pt-2">
             <button aria-label="Custom Suggestions" disabled={busy||phase==='ANALYZING'} onClick={()=>void requestSuggestions()} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-40">
               {phase==='ANALYZING'?<LoaderCircle size={14} className="animate-spin"/>:<Sparkles size={14}/>} Custom Suggestions
@@ -168,13 +198,13 @@ export default function AssistantWindow(){
             <textarea autoFocus aria-label="Custom instruction" className="block min-h-14 w-full resize-y bg-transparent px-1 py-1 text-xs leading-5 outline-none" rows={2} maxLength={4000} value={custom} onChange={e=>setCustom(e.target.value)} placeholder="Describe how to improve this text..."/>
             <div className="flex items-center justify-between gap-2"><button className="text-[11px] text-foreground/50 hover:text-foreground" onClick={()=>{setShowCustom(false);setCustom('');}}>Close</button>{phase==='GENERATING'?<Button variant="outline" className="px-2.5 py-1 text-xs" onClick={cancel}>Cancel</Button>:<Button className="px-3 py-1.5 text-xs" disabled={!custom.trim()||busy} onClick={()=>void runGeneration('',custom)}>Generate</Button>}</div>
           </div>}
-          <div className="flex items-center gap-3 px-1 text-[11px]"><button className="text-foreground/50 hover:text-primary" onClick={()=>setShowGrammar(v=>!v)}>{showGrammar?'Hide local grammar':'Local grammar'}</button>{phase==='GENERATING'&&<button className="text-primary" onClick={cancel}>Cancel generation</button>}{settings?.cloudConsent!=='true'&&<button className="text-primary underline" onClick={()=>void api.openSettings().catch(e=>setError(toMessage(e)))}>Enable Cloud AI</button>}</div>
+          {(phase==='GENERATING'||settings?.cloudConsent!=='true')&&<div className="flex items-center gap-3 px-1 text-[11px]">{phase==='GENERATING'&&<button className="text-primary" onClick={cancel}>Cancel generation</button>}{settings?.cloudConsent!=='true'&&<button className="text-primary underline" onClick={()=>void api.openSettings().catch(e=>setError(toMessage(e)))}>Enable Cloud AI</button>}</div>}
           {showGrammar&&<GrammarPanel text={draft} onChange={v=>{analysisToken.current++;setDraft(v);setAnalysis(null);setResult('');setPhase('READY');}}/>}
-          {(result||phase==='GENERATING')&&<div className="space-y-2 rounded-lg border border-border bg-card p-2.5">
+          {(result||phase==='GENERATING')&&<div className="space-y-1.5 rounded-lg border border-border bg-card p-2">
             <div className="flex items-center justify-between gap-2"><strong className="text-xs">{phase==='GENERATING'?'Generating…':phase==='RESULT_READY'?'Result':'Incomplete result'}</strong><button aria-pressed={compare} className="inline-flex items-center gap-1 text-[11px] text-foreground/50 hover:text-primary" onClick={()=>setCompare(v=>!v)}><ArrowLeftRight size={12}/>Compare</button></div>
             {compare&&<p dir="auto" className="text-content max-h-28 overflow-y-auto rounded-md bg-muted/60 px-2 py-2 text-xs">{original}</p>}
-            <p dir="auto" className="text-content max-h-60 overflow-y-auto rounded-md bg-muted/70 p-2.5 text-[13px] leading-5">{result}{phase==='GENERATING'&&<span className="animate-pulse">▍</span>}</p>
-            <div className="flex gap-2"><Button className="flex-1 py-1.5 text-xs" disabled={phase!=='RESULT_READY'} onClick={()=>void copy(result)}><ClipboardCopy size={13}/>Copy</Button><Button variant="outline" className="py-1.5 text-xs" disabled={phase!=='RESULT_READY'||session.replacementCapability==='copy_only'} onClick={()=>void replace()}><Check size={13}/>Replace</Button></div>
+            <p dir="auto" className="text-content max-h-52 overflow-y-auto rounded-md bg-muted/70 p-2 text-[13px] leading-[19px]">{result}{phase==='GENERATING'&&<span className="animate-pulse">▍</span>}</p>
+            <div className="flex gap-2"><Button className="flex-1 py-1.5 text-xs" disabled={phase!=='RESULT_READY'} onClick={()=>void copy(result)}><ClipboardCopy size={13}/>Copy</Button><Button variant="outline" className="py-1.5 text-xs" title={session.replacementCapability==='copy_only'?"Replacement unavailable in this editor; use Copy.":"Replace the verified selection in the original editor."} disabled={phase!=='RESULT_READY'||session.replacementCapability==='copy_only'} onClick={()=>void replace()}><Check size={13}/>Replace</Button></div>
           </div>}
         </>}
       </div>
