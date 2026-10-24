@@ -2,12 +2,14 @@
 
 use tauri::Manager;
 use tauri_plugin_gpui::GpuiWindowExt;
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 mod ui;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_gpui::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let window = tauri::window::WindowBuilder::new(app, "main")
                 .inner_size(400.0, 300.0)
