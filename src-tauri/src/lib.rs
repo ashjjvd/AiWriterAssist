@@ -790,7 +790,7 @@ fn setup(app: &mut tauri::App) -> std::result::Result<(), Box<dyn std::error::Er
     Ok(())
 }
 pub fn run() {
-    tauri::Builder::default().plugin(tauri_plugin_gpui::init())
+    tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
@@ -861,4 +861,5 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("Writer Assistant failed to start")
 }
+
 
