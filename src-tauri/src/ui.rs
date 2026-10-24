@@ -10,33 +10,6 @@ impl gpui::Render for WriterAssistView {
             .bg(gpui::rgba(0x1E1E1EFF))
             .text_color(gpui::rgb(0xFFFFFFFF))
             .p_4()
-            .rounded_lg()
-            .shadow_lg()
-            .child(
-                gpui::div()
-                    .text_lg()
-                    .font_weight(gpui::FontWeight::BOLD)
-                    .child("AI Writer Assist")
-            )
-            .child(
-                gpui::div()
-                    .mt_2()
-                    .text_sm()
-                    .child("Select text and press Ctrl+Shift+A")
-            )
-            .child(
-                gpui::div()
-                    .mt_4()
-                    .px_4()
-                    .py_2()
-                    .bg(gpui::rgb(0x0078D4))
-                    .rounded_md()
-                    .cursor_pointer()
-                    .hover(|style| style.bg(gpui::rgb(0x106EBE)))
-                    .child("Polish Text")
-                    .on_click(|_, _, _| {
-                        println!("Button clicked!");
-                    })
-            )
+            .child(gpui::div().text_lg().child("AI Writer Assist"))
     }
 }
