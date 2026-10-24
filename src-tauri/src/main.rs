@@ -1,17 +1,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Manager;
-use tauri_plugin_gpui::GpuiWindowExt;
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
 mod ui;
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_gpui::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
-            let window = tauri::window::WindowBuilder::new(app, "main")
+            // 1. Initialize GPUI properly inside setup
+            tauri_plugin_gpui::init(app)?;
+
+            // 2. Create a standard Tauri window
+            let window = tauri::WindowBuilder::new(app, "main")
                 .inner_size(400.0, 300.0)
                 .transparent(true)
                 .decorations(false)
@@ -19,7 +21,8 @@ fn main() {
                 .visible(false)
                 .build()?;
 
-            window.attach_gpui_view(ui::create_ui)?;
+            // 3. Attach GPUI with a closure that creates our view
+            window.attach_gpui(|cx| cx.new(|_| ui::WriterAssistView))?;
             
             Ok(())
         })
