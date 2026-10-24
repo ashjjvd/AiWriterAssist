@@ -1,18 +1,10 @@
 {
-    "$schema":  "../gen/schemas/desktop-schema.json",
-    "identifier":  "default",
-    "description":  "Limited windows and clipboard capabilities",
-    "windows":  [
-                    "settings",
-                    "assistant",
-                    "synonyms"
-                ],
-    "permissions":  [
-                        "core:default",
-                        "core:window:default",
-        "core:window:allow-set-size",
-        "core:window:allow-start-dragging",
-                        "core:event:default",
-                        "clipboard-manager:allow-write-text"
-                    ]
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "global-shortcut:default"
+  ]
 }
